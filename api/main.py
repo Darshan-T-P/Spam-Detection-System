@@ -1,25 +1,40 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
 import joblib
+import os
 
-app = FastAPI(title="YouTube Spam Detection API")
+import logging
 
-# Load model (placeholder)
-# model = joblib.load("models/model.pkl")
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-class Comment(BaseModel):
-    text: str
+app = FastAPI()
 
-@app.get("/")
-def read_root():
-    return {"message": "YouTube Spam Detection API is running"}
+MODEL_PATH = "models/model.pkl"
 
-@app.post("/predict")
-def predict_spam(comment: Comment):
-    # Placeholder logic
-    # prediction = model.predict([comment.text])
-    return {"text": comment.text, "is_spam": False}
+def get_model():
+    if os.path.exists(MODEL_PATH) and os.path.getsize(MODEL_PATH) > 0:
+        try:
+            return joblib.load(MODEL_PATH)
+        except Exception:
+            return None
+    return None
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+model = get_model()
+
+@app.get("/predict")
+def predict(comment: str):
+    logger.info(f"Received prediction request for comment: {comment[:50]}...")
+    if model:
+        result = model.predict([comment])
+        is_spam = int(result[0]) == 1
+    else:
+        # Fallback logic if model is not loaded
+        is_spam = "spam" in comment.lower() or "subscribe" in comment.lower()
+    
+    logger.info(f"Prediction: {'Spam' if is_spam else 'Not Spam'}")
+    return {
+        "prediction": 1 if is_spam else 0,
+        "is_spam": is_spam,
+        "label": "Spam" if is_spam else "Not Spam"
+    }
