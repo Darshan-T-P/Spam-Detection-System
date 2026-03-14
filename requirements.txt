@@ -3,7 +3,7 @@ scikit-learn==1.8.0
 joblib
 fastapi
 uvicorn
-streamlit
+streamlit==1.55.0
 requests
 dvc
 apache-airflow
